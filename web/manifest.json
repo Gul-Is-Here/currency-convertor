@@ -1,11 +1,11 @@
 {
-    "name": "currency_convertor",
-    "short_name": "currency_convertor",
+    "name": "CurrencyHub Live",
+    "short_name": "CurrencyHub",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#7C4DFF",
+    "theme_color": "#7C4DFF",
+    "description": "CurrencyHub Live - Your Complete Currency & Crypto Companion. Real-time exchange rates, interactive charts, and powerful conversion tools.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
