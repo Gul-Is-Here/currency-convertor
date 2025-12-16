@@ -10,7 +10,7 @@ Real-time currency & crypto converter with live rates, charts, and alerts.
 
 Option 1 (79 chars):
 ```
-Convert 150+ currencies & crypto live. Charts, alerts & offline mode included
+Convert 160+ currencies & crypto live. Charts, alerts & offline mode included
 ```
 
 Option 2 (78 chars):
@@ -39,9 +39,9 @@ Perfect for travelers, traders, business professionals, freelancers, and crypto 
 ✨ KEY FEATURES
 
 💱 REAL-TIME CURRENCY CONVERSION
-• Convert between 150+ world currencies instantly
+• Convert between 160+ world currencies instantly (148 fiat + 15 crypto)
 • Live exchange rates updated every 5 minutes
-• Support for all major currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, and more)
+• Support for all major currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, PKR, and 140+ more)
 • Currency flags and symbols for easy identification
 • Quick currency swap with one tap
 • Recent conversion history
@@ -143,9 +143,21 @@ Perfect for travelers, traders, business professionals, freelancers, and crypto 
 
 📊 SUPPORTED CURRENCIES
 
-Major currencies: USD (US Dollar), EUR (Euro), GBP (British Pound), JPY (Japanese Yen), CAD (Canadian Dollar), AUD (Australian Dollar), CHF (Swiss Franc), CNY (Chinese Yuan), INR (Indian Rupee), MXN (Mexican Peso), BRL (Brazilian Real), ZAR (South African Rand), RUB (Russian Ruble), KRW (South Korean Won), SEK (Swedish Krona), NOK (Norwegian Krone), DKK (Danish Krone), and 130+ more!
+**160+ Currencies Supported:**
 
-Cryptocurrencies: Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC), Ripple (XRP), and more!
+**Major Global Currencies:** USD (US Dollar), EUR (Euro), GBP (British Pound), JPY (Japanese Yen), CAD (Canadian Dollar), AUD (Australian Dollar), CHF (Swiss Franc), CNY (Chinese Yuan), INR (Indian Rupee), PKR (Pakistani Rupee)
+
+**Asian Currencies:** THB (Thai Baht), SGD (Singapore Dollar), HKD (Hong Kong Dollar), KRW (South Korean Won), IDR (Indonesian Rupiah), MYR (Malaysian Ringgit), PHP (Philippine Peso), VND (Vietnamese Dong), BDT (Bangladeshi Taka), LKR (Sri Lankan Rupee), NPR (Nepalese Rupee), TWD (Taiwan Dollar), and more!
+
+**European Currencies:** SEK (Swedish Krona), NOK (Norwegian Krone), DKK (Danish Krone), PLN (Polish Zloty), CZK (Czech Koruna), HUF (Hungarian Forint), RON (Romanian Leu), BGN (Bulgarian Lev), UAH (Ukrainian Hryvnia), RUB (Russian Ruble), TRY (Turkish Lira), and more!
+
+**Middle Eastern & African Currencies:** AED (UAE Dirham), SAR (Saudi Riyal), QAR (Qatari Riyal), KWD (Kuwaiti Dinar), EGP (Egyptian Pound), ZAR (South African Rand), NGN (Nigerian Naira), KES (Kenyan Shilling), MAD (Moroccan Dirham), and 40+ more!
+
+**Americas Currencies:** MXN (Mexican Peso), BRL (Brazilian Real), ARS (Argentine Peso), CLP (Chilean Peso), COP (Colombian Peso), PEN (Peruvian Sol), and more!
+
+**Cryptocurrencies (15):** Bitcoin (BTC), Ethereum (ETH), Binance Coin (BNB), Ripple (XRP), Cardano (ADA), Solana (SOL), Polkadot (DOT), Dogecoin (DOGE), Shiba Inu (SHIB), Litecoin (LTC), Polygon (MATIC), Chainlink (LINK), Uniswap (UNI), Stellar (XLM), Tron (TRX)
+
+**Total: 148 Fiat Currencies + 15 Cryptocurrencies = 163 Total**
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

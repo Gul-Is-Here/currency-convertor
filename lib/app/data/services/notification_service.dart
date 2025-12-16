@@ -21,8 +21,8 @@ class NotificationService {
       ),
     ], debug: false);
 
-    // Request permission
-    await requestPermission();
+    // Don't request permission on initialization
+    // Let the converter view handle this when user enters
   }
 
   Future<bool> requestPermission() async {

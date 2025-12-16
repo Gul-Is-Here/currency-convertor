@@ -6,11 +6,55 @@ import '../../core/utils/format_utils.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/mini_chart_widget.dart';
 import '../../core/widgets/offline_indicator.dart';
+import '../../data/services/notification_service.dart';
 // import '../../core/widgets/shimmer_loading.dart';
 import 'currency_selector_sheet.dart';
 
-class ConverterView extends StatelessWidget {
+class ConverterView extends StatefulWidget {
   const ConverterView({super.key});
+
+  @override
+  State<ConverterView> createState() => _ConverterViewState();
+}
+
+class _ConverterViewState extends State<ConverterView> {
+  final NotificationService _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Request notification permission when view loads
+    _checkAndRequestNotificationPermission();
+  }
+
+  Future<void> _checkAndRequestNotificationPermission() async {
+    // Small delay to let the view render first
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+
+    // Check current permission status
+    final isAllowed = await _notificationService.requestPermission();
+
+    if (!isAllowed && mounted) {
+      // Only show message if permission was just denied (not already denied)
+      Get.snackbar(
+        'Enable Notifications',
+        'Get instant alerts when your target exchange rates are reached',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        backgroundColor: AppTheme.primaryColor.withOpacity(0.95),
+        colorText: Colors.white,
+        icon: const Icon(
+          Icons.notifications_active_outlined,
+          color: Colors.white,
+        ),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        isDismissible: true,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
