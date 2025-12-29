@@ -4,6 +4,7 @@ import 'app/core/theme/app_theme.dart';
 import 'app/core/controllers/theme_controller.dart';
 import 'app/data/services/connectivity_service.dart';
 import 'app/data/services/notification_service.dart';
+import 'app/data/services/admob_service.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 
@@ -12,6 +13,12 @@ void main() async {
 
   // Initialize notification service
   await NotificationService().initialize();
+
+  // Initialize Google Mobile Ads SDK
+  await AdMobService.initialize();
+
+  // Preload first interstitial ad
+  AdMobService().preloadAds();
 
   runApp(const MyApp());
 }

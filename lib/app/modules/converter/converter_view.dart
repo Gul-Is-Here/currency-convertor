@@ -7,6 +7,7 @@ import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/mini_chart_widget.dart';
 import '../../core/widgets/offline_indicator.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/widgets/admob_banner_widget.dart';
 // import '../../core/widgets/shimmer_loading.dart';
 import 'currency_selector_sheet.dart';
 
@@ -76,6 +77,9 @@ class _ConverterViewState extends State<ConverterView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
+
+                // Banner Ad
+                const AdMobBannerWidget(margin: EdgeInsets.only(bottom: 16)),
 
                 // Offline Indicator
                 const OfflineIndicator(),

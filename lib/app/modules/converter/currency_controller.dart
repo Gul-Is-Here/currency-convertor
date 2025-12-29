@@ -4,10 +4,12 @@ import '../../data/models/currency_model.dart';
 import '../../data/models/exchange_rate_model.dart';
 import '../../data/models/historical_rate_model.dart';
 import '../../data/services/currency_service.dart';
+import '../../data/services/admob_service.dart';
 import '../../core/utils/constants.dart';
 
 class CurrencyController extends GetxController {
   final CurrencyService _service = CurrencyService();
+  final AdMobService _adMobService = AdMobService();
 
   // Observable variables
   final Rx<Currency> fromCurrency = Rx<Currency>(
@@ -39,6 +41,10 @@ class CurrencyController extends GetxController {
 
   Timer? _autoRefreshTimer;
 
+  // Ad counter - show ad after every 5 conversions
+  int _conversionCount = 0;
+  static const int _conversionsBeforeAd = 5;
+
   @override
   void onInit() {
     super.onInit();
@@ -49,6 +55,7 @@ class CurrencyController extends GetxController {
   @override
   void onClose() {
     _autoRefreshTimer?.cancel();
+    _adMobService.dispose();
     super.onClose();
   }
 
@@ -149,12 +156,26 @@ class CurrencyController extends GetxController {
           amount.value,
         );
         await loadRecentConversions();
+
+        // Show interstitial ad after every N conversions
+        _conversionCount++;
+        if (_conversionCount >= _conversionsBeforeAd) {
+          _conversionCount = 0;
+          _showInterstitialAd();
+        }
       }
     } catch (e) {
       errorMessage.value = 'Conversion error: $e';
     } finally {
       isConverting.value = false;
     }
+  }
+
+  /// Show interstitial ad
+  void _showInterstitialAd() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _adMobService.showInterstitialAd();
+    });
   }
 
   void swapCurrencies() {
