@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../routes/app_routes.dart';
 
 class SplashController extends GetxController
@@ -46,13 +47,20 @@ class SplashController extends GetxController
     await Future.delayed(const Duration(milliseconds: 400));
     loadingOpacity.value = 1.0;
 
-    // Navigate to home after splash duration
+    // Navigate after splash duration
     await Future.delayed(const Duration(milliseconds: 2500));
-    _navigateToHome();
+    _navigateNext();
   }
 
-  void _navigateToHome() {
-    Get.offAllNamed(AppRoutes.home);
+  Future<void> _navigateNext() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+
+    if (onboardingComplete) {
+      Get.offAllNamed(AppRoutes.home);
+    } else {
+      Get.offAllNamed(AppRoutes.onboarding);
+    }
   }
 
   @override

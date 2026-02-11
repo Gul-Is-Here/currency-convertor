@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../converter/converter_view.dart';
 import '../favorites/favorites_view.dart';
@@ -29,17 +30,12 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       appBar: _selectedIndex == 0
           ? AppBar(
-              title: const Text('Currency Converter'),
+              title: const Text('CurrencyHub Live'),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () => Get.toNamed(AppRoutes.alerts),
                   tooltip: 'Rate Alerts',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.calculate_outlined),
-                  onPressed: () => Get.toNamed(AppRoutes.calculator),
-                  tooltip: 'Multi-Currency Calculator',
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings),
@@ -49,15 +45,13 @@ class _HomeViewState extends State<HomeView> {
             )
           : _selectedIndex == 1
           ? AppBar(title: const Text('Crypto Market'))
-          : _selectedIndex == 2
-          ? null // Calculator has its own AppBar
-          : null, // Expenses has its own AppBar
+          : null, // Calculator & Expenses have their own AppBars
       body: _pages[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
@@ -66,6 +60,8 @@ class _HomeViewState extends State<HomeView> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) {
+            // Haptic feedback on tab switch
+            HapticFeedback.lightImpact();
             setState(() {
               _selectedIndex = index;
             });

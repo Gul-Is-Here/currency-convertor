@@ -19,10 +19,19 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
       ),
+      NotificationChannel(
+        channelKey: 'rate_changes',
+        channelName: 'Rate Changes',
+        channelDescription:
+            'Automatic notifications when currency rates move significantly',
+        defaultColor: const Color(0xFF6C63FF),
+        ledColor: Colors.white,
+        importance: NotificationImportance.Default,
+        channelShowBadge: true,
+        playSound: true,
+        enableVibration: false,
+      ),
     ], debug: false);
-
-    // Don't request permission on initialization
-    // Let the converter view handle this when user enters
   }
 
   Future<bool> requestPermission() async {
@@ -73,5 +82,25 @@ class NotificationService {
 
   Future<List<NotificationModel>> getActiveNotifications() async {
     return await AwesomeNotifications().listScheduledNotifications();
+  }
+
+  /// Show a notification for automatic rate change detection
+  Future<void> showRateChangeNotification({
+    required String title,
+    required String body,
+    required String groupKey,
+  }) async {
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        channelKey: 'rate_changes',
+        title: title,
+        body: body,
+        notificationLayout: NotificationLayout.BigText,
+        category: NotificationCategory.Reminder,
+        groupKey: groupKey,
+        payload: {'type': 'rate_change'},
+      ),
+    );
   }
 }

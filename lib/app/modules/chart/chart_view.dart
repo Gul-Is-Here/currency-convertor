@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/format_utils.dart';
 import '../../core/utils/constants.dart';
 import '../../core/widgets/shimmer_loading.dart';
+import '../../data/widgets/admob_banner_widget.dart';
 
 class ChartView extends StatelessWidget {
   const ChartView({super.key});
@@ -43,6 +44,9 @@ class ChartView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Banner Ad
+              const AdMobBannerWidget(margin: EdgeInsets.only(bottom: 16)),
+
               // Currency pair info
               Card(
                 child: Padding(

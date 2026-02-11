@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../modules/splash/splash_view.dart';
 import '../modules/splash/splash_controller.dart';
+import '../modules/onboarding/onboarding_view.dart';
 import '../modules/home/home_view.dart';
 import '../modules/converter/converter_view.dart';
 import '../modules/chart/chart_view.dart';
@@ -9,6 +10,7 @@ import '../modules/settings/settings_view.dart';
 import '../modules/calculator/calculator_view.dart';
 import '../modules/alerts/alerts_view.dart';
 import '../modules/expenses/expenses_view.dart';
+import '../modules/tips/currency_tips_view.dart';
 import '../modules/converter/currency_controller.dart';
 import '../modules/chart/chart_controller.dart';
 import '../modules/calculator/calculator_controller.dart';
@@ -25,6 +27,7 @@ class AppPages {
         Get.lazyPut<SplashController>(() => SplashController());
       }),
     ),
+    GetPage(name: AppRoutes.onboarding, page: () => const OnboardingView()),
     GetPage(
       name: AppRoutes.home,
       page: () => const HomeView(),
@@ -63,5 +66,6 @@ class AppPages {
         Get.lazyPut<ExpenseController>(() => ExpenseController());
       }),
     ),
+    GetPage(name: AppRoutes.tips, page: () => const CurrencyTipsView()),
   ];
 }

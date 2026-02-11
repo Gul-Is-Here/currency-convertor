@@ -5,11 +5,13 @@ import '../../data/models/exchange_rate_model.dart';
 import '../../data/models/historical_rate_model.dart';
 import '../../data/services/currency_service.dart';
 import '../../data/services/admob_service.dart';
+import '../../data/services/rate_monitor_service.dart';
 import '../../core/utils/constants.dart';
 
 class CurrencyController extends GetxController {
   final CurrencyService _service = CurrencyService();
   final AdMobService _adMobService = AdMobService();
+  final RateMonitorService _rateMonitor = RateMonitorService();
 
   // Observable variables
   final Rx<Currency> fromCurrency = Rx<Currency>(
@@ -41,9 +43,8 @@ class CurrencyController extends GetxController {
 
   Timer? _autoRefreshTimer;
 
-  // Ad counter - show ad after every 5 conversions
-  int _conversionCount = 0;
-  static const int _conversionsBeforeAd = 5;
+  // Show interstitial ad after first conversion each session (daily limit enforced by AdMobService)
+  bool _hasTriedAdThisSession = false;
 
   @override
   void onInit() {
@@ -114,6 +115,9 @@ class CurrencyController extends GetxController {
       exchangeRates.value = rates;
       lastUpdate.value = rates.timestamp;
 
+      // Check for rate changes and send notifications if significant
+      _rateMonitor.checkForRateChanges();
+
       // Update converted amount
       await convertCurrency();
     } catch (e) {
@@ -157,10 +161,9 @@ class CurrencyController extends GetxController {
         );
         await loadRecentConversions();
 
-        // Show interstitial ad after every N conversions
-        _conversionCount++;
-        if (_conversionCount >= _conversionsBeforeAd) {
-          _conversionCount = 0;
+        // Try to show interstitial ad once per session (daily limit enforced by AdMobService)
+        if (!_hasTriedAdThisSession) {
+          _hasTriedAdThisSession = true;
           _showInterstitialAd();
         }
       }

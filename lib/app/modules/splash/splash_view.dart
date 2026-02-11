@@ -200,7 +200,7 @@ class SplashView extends GetView<SplashController> {
                   duration: const Duration(milliseconds: 800),
                   child: Center(
                     child: Text(
-                      'Version 1.0.0',
+                      'Version 1.1.0',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withOpacity(0.7),

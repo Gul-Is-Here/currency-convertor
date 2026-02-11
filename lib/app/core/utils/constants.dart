@@ -5,8 +5,8 @@ class AppConstants {
   static const int cacheExpiryHours = 1;
 
   // App Configuration
-  static const String appName = 'Currency Converter';
-  static const String appVersion = '1.0.0';
+  static const String appName = 'CurrencyHub Live';
+  static const String appVersion = '1.1.0';
 
   // Chart periods
   static const List<String> chartPeriods = ['7D', '1M', '3M', '1Y'];

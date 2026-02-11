@@ -9,6 +9,7 @@ import '../../core/utils/format_utils.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/offline_indicator.dart';
 import '../../data/providers/currency_data.dart';
+import '../../data/widgets/admob_banner_widget.dart';
 
 class CalculatorView extends StatelessWidget {
   const CalculatorView({super.key});
@@ -44,7 +45,10 @@ class CalculatorView extends StatelessWidget {
               children: [
                 // Offline Indicator
                 const OfflineIndicator(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+
+                // Banner Ad
+                const AdMobBannerWidget(margin: EdgeInsets.only(bottom: 16)),
 
                 // Calculator Tools Section - Enhanced
                 Row(

@@ -1,5 +1,6 @@
 class AppRoutes {
   static const String splash = '/splash';
+  static const String onboarding = '/onboarding';
   static const String home = '/home';
   static const String converter = '/converter';
   static const String chart = '/chart';
@@ -8,4 +9,5 @@ class AppRoutes {
   static const String calculator = '/calculator';
   static const String alerts = '/alerts';
   static const String expenses = '/expenses';
+  static const String tips = '/tips';
 }

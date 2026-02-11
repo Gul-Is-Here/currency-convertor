@@ -5,6 +5,7 @@ import 'app/core/controllers/theme_controller.dart';
 import 'app/data/services/connectivity_service.dart';
 import 'app/data/services/notification_service.dart';
 import 'app/data/services/admob_service.dart';
+import 'app/data/services/rate_monitor_service.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 
@@ -19,6 +20,9 @@ void main() async {
 
   // Preload first interstitial ad
   AdMobService().preloadAds();
+
+  // Initialize background rate monitoring (runs even when app is closed)
+  await RateMonitorService().initializeBackgroundTasks();
 
   runApp(const MyApp());
 }

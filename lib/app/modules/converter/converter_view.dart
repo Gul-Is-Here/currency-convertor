@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart' show Share;
 import 'currency_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/format_utils.dart';
-import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/mini_chart_widget.dart';
 import '../../core/widgets/offline_indicator.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/widgets/admob_banner_widget.dart';
-// import '../../core/widgets/shimmer_loading.dart';
 import 'currency_selector_sheet.dart';
 
 class ConverterView extends StatefulWidget {
@@ -18,242 +18,136 @@ class ConverterView extends StatefulWidget {
   State<ConverterView> createState() => _ConverterViewState();
 }
 
-class _ConverterViewState extends State<ConverterView> {
+class _ConverterViewState extends State<ConverterView>
+    with SingleTickerProviderStateMixin {
   final NotificationService _notificationService = NotificationService();
+  late AnimationController _swapAnimController;
+  late Animation<double> _swapRotation;
 
   @override
   void initState() {
     super.initState();
-    // Request notification permission when view loads
+    _swapAnimController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _swapRotation = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _swapAnimController, curve: Curves.easeInOut),
+    );
     _checkAndRequestNotificationPermission();
   }
 
+  @override
+  void dispose() {
+    _swapAnimController.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkAndRequestNotificationPermission() async {
-    // Small delay to let the view render first
     await Future.delayed(const Duration(milliseconds: 500));
-
     if (!mounted) return;
-
-    // Check current permission status
-    final isAllowed = await _notificationService.requestPermission();
-
-    if (!isAllowed && mounted) {
-      // Only show message if permission was just denied (not already denied)
-      Get.snackbar(
-        'Enable Notifications',
-        'Get instant alerts when your target exchange rates are reached',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 4),
-        backgroundColor: AppTheme.primaryColor.withOpacity(0.95),
-        colorText: Colors.white,
-        icon: const Icon(
-          Icons.notifications_active_outlined,
-          color: Colors.white,
-        ),
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        isDismissible: true,
-      );
-    }
+    await _notificationService.requestPermission();
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(CurrencyController());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Obx(() {
+        // Error state
+        if (controller.errorMessage.value.isNotEmpty &&
+            controller.exchangeRates.value == null) {
+          return _buildErrorState(controller, isDark);
+        }
+
+        // Loading state
         if (controller.isLoading.value &&
             controller.exchangeRates.value == null) {
-          return Center(child: const CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: AppTheme.primaryColor),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading exchange rates...',
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         return RefreshIndicator(
+          color: AppTheme.primaryColor,
           onRefresh: controller.refresh,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 8),
-
-                // Banner Ad
-                const AdMobBannerWidget(margin: EdgeInsets.only(bottom: 16)),
+                // Banner Ad at top
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: AdMobBannerWidget(margin: EdgeInsets.only(bottom: 8)),
+                ),
 
                 // Offline Indicator
-                const OfflineIndicator(),
-                if (controller.lastUpdate.value != null)
-                  const SizedBox(height: 12),
-
-                // Header with Last Update and Mini Chart
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (controller.lastUpdate.value != null)
-                      Expanded(
-                        child: Text(
-                          'Updated ${FormatUtils.formatTimeAgo(controller.lastUpdate.value!)}',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[600]),
-                        ),
-                      ),
-                  ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: OfflineIndicator(),
                 ),
+
+                const SizedBox(height: 4),
+
+                // ─── MAIN CONVERSION CARD ───
+                _buildConversionSection(context, controller, isDark),
+
+                const SizedBox(height: 12),
+
+                // ─── EXCHANGE RATE PILL ───
+                if (controller.currentRate.value > 0)
+                  _buildExchangeRateChip(context, controller, isDark),
+
                 const SizedBox(height: 16),
 
-                // Mini Chart
-                const MiniChartWidget(),
-                const SizedBox(height: 20),
+                // ─── QUICK ACTIONS ───
+                _buildQuickActions(context, isDark),
 
-                // Currency Conversion Card
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        // From Currency
-                        _buildCompactCurrencyInput(
-                          context,
-                          controller,
-                          isFrom: true,
-                        ),
+                const SizedBox(height: 16),
 
-                        const SizedBox(height: 12),
-
-                        // Swap Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.swap_vert,
-                              color: Colors.white,
-                            ),
-                            onPressed: controller.swapCurrencies,
-                            iconSize: 28,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // To Currency
-                        _buildCompactCurrencyInput(
-                          context,
-                          controller,
-                          isFrom: false,
-                        ),
-                      ],
-                    ),
-                  ),
+                // ─── MINI CHART ───
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: MiniChartWidget(),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Exchange Rate Info
-                if (controller.currentRate.value > 0)
-                  Card(
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: AppTheme.primaryColor.withOpacity(0.05),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Exchange Rate',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w500),
-                          ),
-                          Text(
-                            '1 ${controller.fromCurrency.value.code} = ${FormatUtils.formatCurrency(controller.currentRate.value, controller.toCurrency.value.code, decimals: 4)} ${controller.toCurrency.value.code}',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                          ),
-                        ],
+                // ─── RECENT CONVERSIONS ───
+                if (controller.recentConversions.isNotEmpty)
+                  _buildRecentConversions(context, controller, isDark),
+
+                // Last updated timestamp
+                if (controller.lastUpdate.value != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Center(
+                      child: Text(
+                        'Updated ${FormatUtils.formatTimeAgo(controller.lastUpdate.value!)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[600] : Colors.grey[400],
+                        ),
                       ),
                     ),
                   ),
 
-                const SizedBox(height: 20),
-
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: GradientButton(
-                        text: 'View Chart',
-                        icon: Icons.show_chart,
-                        onPressed: () => Get.toNamed('/chart'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GradientButton(
-                        text: 'Rate Alerts',
-                        icon: Icons.notifications_active,
-                        onPressed: () => Get.toNamed('/alerts'),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Recent Conversions
-                if (controller.recentConversions.isNotEmpty) ...[
-                  Text(
-                    'Recent Conversions',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  ...controller.recentConversions.take(5).map((conversion) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppTheme.primaryColor.withOpacity(
-                            0.1,
-                          ),
-                          child: const Icon(
-                            Icons.history,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                        title: Text(
-                          '${conversion['amount']} ${conversion['from']} → ${conversion['to']}',
-                        ),
-                        subtitle: Text(
-                          FormatUtils.formatTimeAgo(
-                            DateTime.parse(conversion['timestamp']!),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -262,117 +156,80 @@ class _ConverterViewState extends State<ConverterView> {
     );
   }
 
-  // Compact Currency Input Widget
-  Widget _buildCompactCurrencyInput(
+  // ══════════════════════════════════════════
+  //  MAIN CONVERSION SECTION
+  // ══════════════════════════════════════════
+  Widget _buildConversionSection(
     BuildContext context,
-    CurrencyController controller, {
-    required bool isFrom,
-  }) {
-    final currency = isFrom
-        ? controller.fromCurrency.value
-        : controller.toCurrency.value;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isFrom ? Colors.white : AppTheme.primaryColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isFrom
-              ? Colors.grey.shade300
-              : AppTheme.primaryColor.withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    CurrencyController controller,
+    bool isDark,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
         children: [
-          // Currency Selector
-          InkWell(
-            onTap: () => _showCurrencySelector(context, controller, isFrom),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  // Flag
-                  Text(currency.flag, style: const TextStyle(fontSize: 28)),
-                  const SizedBox(width: 10),
-                  // Currency Code and Name
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          currency.code,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          currency.name,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+          Column(
+            children: [
+              // FROM card
+              _buildCurrencyTile(
+                context,
+                controller,
+                isDark,
+                isFrom: true,
+                label: 'You send',
+              ),
+
+              const SizedBox(height: 6),
+
+              // TO card
+              _buildCurrencyTile(
+                context,
+                controller,
+                isDark,
+                isFrom: false,
+                label: 'They receive',
+              ),
+            ],
+          ),
+
+          // Floating swap button
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 24,
+            child: Center(
+              child: RotationTransition(
+                turns: _swapRotation,
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    _swapAnimController.forward(from: 0);
+                    controller.swapCurrencies();
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
+                    child: const Icon(
+                      Icons.swap_vert_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
-                  Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
-                ],
+                ),
               ),
-            ),
-          ),
-
-          const Divider(height: 1),
-
-          // Amount Input/Display
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  currency.symbol,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isFrom ? Colors.grey[800] : AppTheme.primaryColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: isFrom
-                      ? TextField(
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                          decoration: InputDecoration(
-                            hintText: '0.00',
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onChanged: controller.setAmount,
-                        )
-                      : Text(
-                          FormatUtils.formatCurrency(
-                            controller.convertedAmount.value,
-                            currency.code,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                ),
-              ],
             ),
           ),
         ],
@@ -380,6 +237,529 @@ class _ConverterViewState extends State<ConverterView> {
     );
   }
 
+  // ══════════════════════════════════════════
+  //  CURRENCY TILE (From / To)
+  // ══════════════════════════════════════════
+  Widget _buildCurrencyTile(
+    BuildContext context,
+    CurrencyController controller,
+    bool isDark, {
+    required bool isFrom,
+    required String label,
+  }) {
+    final currency = isFrom
+        ? controller.fromCurrency.value
+        : controller.toCurrency.value;
+
+    final cardColor = isDark
+        ? (isFrom ? Colors.grey[850] : Colors.grey[900])
+        : (isFrom ? Colors.white : const Color(0xFFF5F3FF));
+
+    final borderColor = isDark
+        ? (isFrom
+              ? Colors.grey[700]!
+              : AppTheme.primaryColor.withValues(alpha: 0.25))
+        : (isFrom
+              ? Colors.grey.shade200
+              : AppTheme.primaryColor.withValues(alpha: 0.15));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.2),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 48, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Flag + Code + Name  |  Amount
+          Row(
+            children: [
+              // Currency selector (tappable)
+              Expanded(
+                flex: 3,
+                child: GestureDetector(
+                  onTap: () =>
+                      _showCurrencySelector(context, controller, isFrom),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      // Flag circle
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.grey[800]
+                              : Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          currency.flag,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  currency.code,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 18,
+                                  color: Colors.grey[500],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              currency.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Divider line
+              Container(
+                width: 1,
+                height: 40,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: isDark ? Colors.grey[700] : Colors.grey.shade200,
+              ),
+
+              // Amount area
+              Expanded(
+                flex: 2,
+                child: isFrom
+                    ? TextField(
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : AppTheme.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.grey[600] : Colors.grey[400],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: controller.setAmount,
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              FormatUtils.formatCurrency(
+                                controller.convertedAmount.value,
+                                currency.code,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            currency.symbol,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  //  EXCHANGE RATE CHIP
+  // ══════════════════════════════════════════
+  Widget _buildExchangeRateChip(
+    BuildContext context,
+    CurrencyController controller,
+    bool isDark,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.primaryColor.withValues(alpha: 0.12)
+              : AppTheme.primaryColor.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.sync_alt_rounded,
+              size: 18,
+              color: AppTheme.primaryColor.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '1 ${controller.fromCurrency.value.code} = ${FormatUtils.formatCurrency(controller.currentRate.value, controller.toCurrency.value.code, decimals: 4)} ${controller.toCurrency.value.code}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            // Share button
+            InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                final from = controller.fromCurrency.value;
+                final to = controller.toCurrency.value;
+                final amount = controller.amount.value;
+                final result = FormatUtils.formatCurrency(
+                  controller.convertedAmount.value,
+                  to.code,
+                );
+                Share.share(
+                  '$amount ${from.code} = $result ${to.code}\n'
+                  'Rate: 1 ${from.code} = ${FormatUtils.formatCurrency(controller.currentRate.value, to.code, decimals: 4)} ${to.code}\n\n'
+                  'Converted with CurrencyHub Live',
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.share_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  //  QUICK ACTIONS
+  // ══════════════════════════════════════════
+  Widget _buildQuickActions(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildActionChip(
+            context,
+            isDark,
+            icon: Icons.show_chart_rounded,
+            label: 'Charts',
+            color: AppTheme.primaryColor,
+            onTap: () => Get.toNamed('/chart'),
+          ),
+          const SizedBox(width: 10),
+          _buildActionChip(
+            context,
+            isDark,
+            icon: Icons.notifications_active_rounded,
+            label: 'Alerts',
+            color: AppTheme.secondaryColor,
+            onTap: () => Get.toNamed('/alerts'),
+          ),
+          const SizedBox(width: 10),
+          _buildActionChip(
+            context,
+            isDark,
+            icon: Icons.receipt_long_rounded,
+            label: 'Expenses',
+            color: AppTheme.accentColor,
+            onTap: () => Get.toNamed('/expenses'),
+          ),
+          const SizedBox(width: 10),
+          _buildActionChip(
+            context,
+            isDark,
+            icon: Icons.lightbulb_outline_rounded,
+            label: 'Tips',
+            color: Colors.amber.shade700,
+            onTap: () => Get.toNamed('/tips'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionChip(
+    BuildContext context,
+    bool isDark, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark
+                ? color.withValues(alpha: 0.12)
+                : color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 22, color: color),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  //  RECENT CONVERSIONS
+  // ══════════════════════════════════════════
+  Widget _buildRecentConversions(
+    BuildContext context,
+    CurrencyController controller,
+    bool isDark,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                '${controller.recentConversions.length} conversions',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...controller.recentConversions.take(4).map((conversion) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? Colors.grey[800]! : Colors.grey.shade100,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.swap_horiz_rounded,
+                      size: 18,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${conversion['amount']} ${conversion['from']} → ${conversion['to']}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          FormatUtils.formatTimeAgo(
+                            DateTime.parse(conversion['timestamp']!),
+                          ),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.grey[600] : Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  //  ERROR STATE
+  // ══════════════════════════════════════════
+  Widget _buildErrorState(CurrencyController controller, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 40,
+                color: AppTheme.errorColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Failed to Load Data',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              controller.errorMessage.value,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: 160,
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  controller.errorMessage.value = '';
+                  controller.initializeData();
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+                label: const Text(
+                  'Retry',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  //  CURRENCY SELECTOR SHEET
+  // ══════════════════════════════════════════
   void _showCurrencySelector(
     BuildContext context,
     CurrencyController controller,

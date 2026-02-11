@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/format_utils.dart';
 import '../../data/providers/crypto_api_provider.dart';
+import '../../data/widgets/admob_banner_widget.dart';
 import 'dart:async';
 
 class FavoritesView extends StatefulWidget {
@@ -65,33 +66,51 @@ class _FavoritesViewState extends State<FavoritesView> {
       final prices = await _cryptoApi.getCryptoPrices();
       final Map<String, CryptoData> newData = {};
 
-      // Load history for only first 4 cryptos to reduce API calls
       for (var i = 0; i < _cryptos.length; i++) {
         final crypto = _cryptos[i];
         try {
           final currentPrice = prices[crypto.id] ?? 0.0;
 
           if (currentPrice > 0) {
-            // For demo purposes, generate simple mock history data to avoid rate limits
-            final mockHistory = _generateMockHistory(currentPrice);
+            // Try to fetch real history from CoinGecko API
+            List<Map<String, dynamic>> history;
+            try {
+              history = await _cryptoApi.getCryptoHistory(
+                cryptoId: crypto.id,
+                days: 1,
+              );
+              // Limit data points to avoid overload
+              if (history.length > 48) {
+                final step = history.length ~/ 48;
+                history = [
+                  for (int j = 0; j < history.length; j += step) history[j],
+                ];
+              }
+            } catch (_) {
+              // Fallback: generate deterministic history
+              history = _generateFallbackHistory(currentPrice, crypto.id);
+            }
 
-            final firstPrice = mockHistory.first['price'] as double;
-            final change24h = ((currentPrice - firstPrice) / firstPrice) * 100;
+            final firstPrice = history.isNotEmpty
+                ? history.first['price'] as double
+                : currentPrice;
+            final change24h = firstPrice > 0
+                ? ((currentPrice - firstPrice) / firstPrice) * 100
+                : 0.0;
 
             newData[crypto.id] = CryptoData(
               currentPrice: currentPrice,
               change24h: change24h,
-              history: mockHistory,
+              history: history,
             );
           }
         } catch (e) {
-          print('Error loading ${crypto.name}: $e');
           // Continue loading other cryptos even if one fails
         }
 
-        // Add delay between requests to avoid rate limiting
+        // Delay between requests to avoid rate limiting
         if (i < _cryptos.length - 1) {
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 300));
         }
       }
 
@@ -119,15 +138,17 @@ class _FavoritesViewState extends State<FavoritesView> {
     }
   }
 
-  // Generate mock 24h history data based on current price
-  // This reduces API calls while still showing realistic charts
-  List<Map<String, dynamic>> _generateMockHistory(double currentPrice) {
+  // Generate deterministic fallback history when API is unavailable
+  List<Map<String, dynamic>> _generateFallbackHistory(
+    double currentPrice,
+    String cryptoId,
+  ) {
     final history = <Map<String, dynamic>>[];
-    final random = currentPrice.hashCode % 100; // Deterministic "randomness"
+    final rng = cryptoId.hashCode % 100;
 
     // Generate 24 data points (hourly data for 24 hours)
     for (int i = 0; i < 24; i++) {
-      final variance = (random + i * 7) % 10 - 5; // -5% to +5% variance
+      final variance = (rng + i * 7) % 10 - 5; // -5% to +5% variance
       final priceVariance = currentPrice * (variance / 100);
       final price =
           currentPrice + priceVariance - (currentPrice * 0.02 * (24 - i) / 24);
@@ -151,6 +172,11 @@ class _FavoritesViewState extends State<FavoritesView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Banner Ad at top
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: AdMobBannerWidget(),
+            ),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

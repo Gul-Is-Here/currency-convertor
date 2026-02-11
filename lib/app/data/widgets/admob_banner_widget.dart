@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/admob_service.dart';
@@ -7,8 +8,7 @@ class AdMobBannerWidget extends StatefulWidget {
   final AdSize adSize;
   final EdgeInsets? margin;
 
-  const AdMobBannerWidget({Key? key, this.adSize = AdSize.banner, this.margin})
-    : super(key: key);
+  const AdMobBannerWidget({super.key, this.adSize = AdSize.banner, this.margin});
 
   @override
   State<AdMobBannerWidget> createState() => _AdMobBannerWidgetState();
@@ -32,7 +32,7 @@ class _AdMobBannerWidgetState extends State<AdMobBannerWidget> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          print('✅ Banner ad loaded successfully');
+          debugPrint('Banner ad loaded');
           if (mounted) {
             setState(() {
               _isAdLoaded = true;
@@ -40,7 +40,7 @@ class _AdMobBannerWidgetState extends State<AdMobBannerWidget> {
           }
         },
         onAdFailedToLoad: (ad, error) {
-          print('⚠️ Banner ad failed to load: $error');
+          debugPrint('Banner ad failed to load: $error');
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -48,12 +48,6 @@ class _AdMobBannerWidgetState extends State<AdMobBannerWidget> {
               _bannerAd = null;
             });
           }
-        },
-        onAdOpened: (ad) {
-          print('📱 Banner ad opened');
-        },
-        onAdClosed: (ad) {
-          print('❌ Banner ad closed');
         },
       ),
     );
@@ -70,7 +64,6 @@ class _AdMobBannerWidgetState extends State<AdMobBannerWidget> {
   @override
   Widget build(BuildContext context) {
     if (!_isAdLoaded || _bannerAd == null) {
-      // Show placeholder while ad loads
       return Container(
         margin: widget.margin,
         height: widget.adSize.height.toDouble(),
@@ -99,7 +92,7 @@ class _AdMobBannerWidgetState extends State<AdMobBannerWidget> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
